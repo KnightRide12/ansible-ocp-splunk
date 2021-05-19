@@ -1,0 +1,4 @@
+---
+# vars file for monitoring
+ocp_user: "kubeadmin"
+ocp_pass: "YYIdi-pjPvp-4PYJh-gPuPy"

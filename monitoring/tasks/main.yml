@@ -1,0 +1,74 @@
+---
+# tasks file for monitoring
+- block:
+  - name: Log into openshift
+    k8s_auth:
+      username: "{{ ocp_user }}"
+      password: "{{ ocp_pass }}"
+    register: k8s_auth_results
+
+  - name: Create elastic search namespace
+    k8s:
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      state: present
+      definition: "{{ lookup('template', './eo-namespace.yaml') | from_yaml }}"
+
+  - name: Create elastic search operator group
+    k8s:
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      state: present
+      definition: "{{ lookup('template', './eo-og.yaml') | from_yaml }}"
+
+  - name: Create elastic search subscription
+    k8s:
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      state: present
+      definition: "{{ lookup('template', './eo-sub.yaml') | from_yaml }}"
+  
+  - name: Create cluster logging namespace
+    k8s:
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      state: present
+      definition: "{{ lookup('template', './clo-namespace.yaml') | from_yaml }}"
+
+  - name: Create cluster logging operator group
+    k8s:
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      state: present
+      definition: "{{ lookup('template', './clo-og.yaml') | from_yaml }}"
+
+  - name: Create cluster logging subscription
+    k8s:
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      state: present
+      definition: "{{ lookup('template', './clo-sub.yaml') | from_yaml }}"
+
+  - name: Create cluster logging instance
+    k8s:
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      state: present
+      definition: "{{ lookup('template', './cl-instance.yaml') | from_yaml }}"
+
+  - name: Pause for 90 seconds for cluster logging resource to be created
+    pause:
+      seconds: 90
+
+  - name: Wait for logging instance pods to be ready
+    community.kubernetes.k8s_info:
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      kind: Pod
+      wait: yes
+      namespace: openshift-logging
+      wait_sleep: 10
+      wait_timeout: 120
+      label_selectors:
+        - component=fluentd
+      field_selectors:
+        - status.phase=Running
+
+  always:
+  - name: Log out
+    when: k8s_auth_results.k8s_auth.api_key is defined
+    k8s_auth:
+      state: absent
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"

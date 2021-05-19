@@ -1,0 +1,40 @@
+---
+# tasks file for splunk
+- name: Install helm
+  get_url:
+    url: https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/helm-linux-amd64
+    dest: /usr/local/bin/helm
+    mode: '0551'
+  become: true
+
+- name: Clone logforwarding repo
+  git:
+    repo: 'https://github.com/sabre1041/openshift-logforwarding-splunk.git'
+    dest: ~/openshift-logforwarding-splunk
+
+- name: Login to OpenShift
+  k8s_auth:
+    username: "{{ ocp_user }}"
+    password: "{{ ocp_pass }}"
+  register: k8s_auth_results
+
+- name: Login to openshift using oc
+  shell:
+    cmd: oc login --token="{{ k8s_auth_results.k8s_auth.api_key }}"  "{{ ocp_api_url }}"
+    chdir: ~/openshift-logforwarding-splunk
+
+- name: Deploy splunk pod
+  shell:
+    cmd: ./splunk-install.sh
+    chdir: ~/openshift-logforwarding-splunk
+
+- name: Install helm chart
+  shell:
+    cmd: helm upgrade -i --namespace=openshift-logging openshift-logforwarding-splunk charts/openshift-logforwarding-splunk/ --set forwarding.splunk.token="{{ hec_token }}"
+    chdir: ~/openshift-logforwarding-splunk
+
+- name: Log out openshift
+  when: k8s_auth.results.k8s_auth.api_key is defined
+  k8s_auth:
+    state: absent
+    api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"

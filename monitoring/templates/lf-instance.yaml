@@ -1,0 +1,27 @@
+apiVersion: logging.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: instance 
+  namespace: openshift-logging
+spec:
+  disableDefaultForwarding: true 
+  outputs: 
+   - name: elasticsearch 
+     type: "elasticsearch"  
+     url: tcp://elasticsearch.openshift-logging.svc:9200 
+     secret: 
+        name: fluentd
+   - name: fluentd-forward
+     type: "fluentdForward"
+     url: https://fluentd-forward.svc:24224
+     secret:
+        name: fluentd-forward
+  pipelines: 
+   - name: forward-to-fluentd
+     inputRefs:
+     - application
+     - audit
+     - infrastructure
+     outputRefs: 
+     - elasticsearch
+     - fluentd-forward
