@@ -11,6 +11,7 @@
   git:
     repo: 'https://github.com/sabre1041/openshift-logforwarding-splunk.git'
     dest: ~/openshift-logforwarding-splunk
+    update: no
 
 - name: Login to OpenShift
   k8s_auth:
